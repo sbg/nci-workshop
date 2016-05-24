@@ -25,8 +25,8 @@ meta <- read.csv(args[2], header=TRUE) # get the metadata matrix
 ## For testing only:
 #gene = read.csv("brca_gene.csv", header = TRUE, row.names=1)
 #meta = read.csv("brca_metadata.csv", header = TRUE)
-gene = gene[,1:20]
-meta = meta[1:20,]
+#gene = gene[,1:20]
+#meta = meta[1:20,]
 
 print("CSV Files Read")
 
@@ -52,16 +52,8 @@ write.csv(resOrdered, output_title) # output df as csv
 plot_title <- args[4] %&% "_plots_rnaseq.pdf"
 pdf(plot_title)
 
-# Plot -- Volcano plot
-plotMA(res,main="DESeq2", ylim = c(-4,4))
-
-# Heatmap -- Gene Expression by Sample Type
-select <- order(rowMeans(counts(dds,normalized=TRUE)), decreasing=TRUE)[1:200]
-nt <- normTransform(dds) # log2(count+1) normalization 
-log2.norm.counts <- assay(nt)[select,]
-df <- as.data.frame(colData(dds)[,c("sample_type")])
-colnames(df) <- "sample_type"
-pheatmap(log2.norm.counts, cluster_rows=FALSE, show_rownames=FALSE, cluster_cols=FALSE, annotation_col=df)
+# Plot -- MA
+plotMA(res, main="DESeq2", ylim = c(-4,4))
 
 # Set up normalization method
 normalization_method <- args[5]
@@ -70,18 +62,11 @@ if (normalization_method == "rld") {
 } else if (normalization_method == "vsd") {
     nmeth <- varianceStabilizingTransformation(dds, blind=FALSE)
 }
-
-# Heatmap -- Sample-Sample Distance 
-sampleDists <- (dist(t(assay(nmeth))))
-sampleDistMatrix <- as.matrix(sampleDists)
-colnames(sampleDistMatrix) <- NULL
-colors <- colorRampPalette(rev(brewer.pal(9,"Blues")))(255)
-rownames(sampleDistMatrix) <- paste(nmeth$condition, nmeth$sample_type, sep="-")
-pheatmap(sampleDistMatrix, clustering_distance_rows=sampleDists, clustering_distance_cols=sampleDists,col=colors)
-
 # PCA plot -- sample-type
 plotPCA(nmeth,intgroup=c("sample_type"))
 
 # Finish up
 dev.off()
 print("PDF plot saved")
+
+######################

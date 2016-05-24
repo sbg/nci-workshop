@@ -1,0 +1,1004 @@
+{
+  "class": "Workflow",
+  "steps": [
+    {
+      "id": "#Gene_Expression_Munger",
+      "run": {
+        "temporaryFailCodes": [],
+        "sbg:revision": 17,
+        "sbg:createdOn": 1459127745,
+        "sbg:modifiedOn": 1463612263,
+        "stdout": "",
+        "sbg:modifiedBy": "gauravCGC",
+        "hints": [
+          {
+            "value": 1,
+            "class": "sbg:CPURequirement"
+          },
+          {
+            "value": 1000,
+            "class": "sbg:MemRequirement"
+          },
+          {
+            "dockerPull": "rfranklin/pythondev",
+            "class": "DockerRequirement",
+            "dockerImageId": ""
+          }
+        ],
+        "sbg:image_url": null,
+        "y": 358.285918994838,
+        "sbg:toolkit": "DataScience",
+        "description": "Gene Expression Munger is a tool built for processing Level 3 RNA-seq gene expression data from The Cancer Genome Atlas. It will produce two tables of gene expression data (per gene, or per case) as well as a metadata table. It is capable of processing any number of files as it will automatically create an index for the list of files you specify, and then use that index in the command line.\n\nThis code was produced by Gaurav Kaushik with contributions from Boysha Tijanic for the Seven Bridges + NIH BD2K Hackathon, which took place April 1st to 3rd, 2016.",
+        "requirements": [
+          {
+            "fileDef": [
+              {
+                "fileContent": "\"\"\"\nusage: munger.py [-h] [-f FILES [FILES ...]] [-r INDEX_FILE] [-c] [-o OUTPUT_FILENAME]\n\noptional arguments:\n  -h, --help            show this help message and exit\n  -f FILES [FILES ...], --files FILES [FILES ...]\n                        TCGA Gene Expression TXT files\n  -c, --csv\n  -r FILE_INDEX         A file with input files, one each line. Merged with -f files.\n  -o OUTPUT_FILENAME, --output_filename OUTPUT_FILENAME\n\"\"\"\n\nimport pandas as pd\nimport argparse\nimport sys\n\n# To read TXT files:\n# df = pd.read_table(filename)\n# To read MAF files:\n# df = pd.read_table(filename, skiprows=1) # to skip the version row\n\ndef get_dataframe_list(args, data_fields=('gene', 'raw_counts')):\n\n    # GET A LIST OF DATAFRAMES\n    dfs, files = [], args['files'] or []\n    if args['file_index']:\n        with open(args['file_index']) as fp:\n            files.extend(fp.readlines())\n    files = sorted(filter(None, set([f.strip() for f in files])))\n    for f in files:\n        # Get only specific columns with usecols\n        df = pd.read_table(f, usecols=data_fields)\n        dfs.append(df)\n    return dfs, files # a list of dataframes\n\ndef get_metadata_tag(filename):\n    \"\"\" Gets a filename (without extension) from a provided path \"\"\"\n    UNCID = filename.split('/')[-1].split('.')[0]\n    TCGA = filename.split('/')[-1].split('.')[1]\n    return TCGA\n\ndef merge_texts(args):\n    # get the list of dataframes\n    dfs, filenames = get_dataframe_list(args)\n    # files_list = filenames\n    # get the filenames to later append the column name with the TCGA barcode\n    # filenames = args['files'] # need to get the INDEX\n    # rename the columns of the first df\n    print dfs\n    df = dfs[0].rename(columns={'raw_counts': 'raw_counts_' + get_metadata_tag(filenames[0])})\n    # enumerate over the list, merge, and rename columns\n    for i, frame in enumerate(dfs[1:], 2):\n        df = df.merge(frame, on='gene').rename(columns={'raw_counts':'raw_counts_' + get_metadata_tag(filenames[i-1])})\n    return df\n\ndef get_csv(args, df, filename='GEX_dataframe.csv', header_opt=False, index_opt=False):\n    # if csv is true and an output filename is given, rename\n    # there is a default filename, so it should pass if --csv is True\n    if args['csv'] and args['output_filename']:\n        return df.to_csv(path_or_buf=filename, header=header_opt, index=index_opt)\n\ndef get_transpose(df):\n    df_transpose = df.transpose()\n    df_transpose = df_transpose.rename(index = {'gene':'case'})\n    return df_transpose\n\ndef main(args):\n    df = merge_texts(args)\n    get_csv(args, df, filename=str(args['output_filename']) + '_by_gene.csv', header_opt=True)\n    if args['transpose']:\n        get_csv(args, get_transpose(df), filename=str(args['output_filename']) + '_by_case.csv', header_opt=False, index_opt=True)\n    return df\n\nif __name__ == \"__main__\":\n    parser = argparse.ArgumentParser()\n    parser.add_argument(\"-f\", \"--files\", help=\"TCGA Gene Expression TXT files\", nargs=\"+\")\n    parser.add_argument(\"-c\", \"--csv\", action=\"store_true\", default=False)\n    parser.add_argument(\"-t\", \"--transpose\", action=\"store_true\", default=False)\n    parser.add_argument(\"-o\", \"--output_filename\", type=str, default=\"GEX_dataframe\")\n    parser.add_argument(\"-r\", \"--file_index\", type=str, default=None)\n\n    args = parser.parse_args()\n    args = vars(args)\n    if not args['files'] and not args['file_index']:\n        parser.print_help()\n        sys.exit(0)\n\n    df = main(args)",
+                "filename": "munger.py"
+              },
+              {
+                "fileContent": {
+                  "script": "{\n  var keys = ['case_id', 'age_at_diagnosis', 'vital_status', 'days_to_death', 'gender', 'sample_type', 'primary_site', 'race', 'ethnicity', 'platform', 'investigation', 'case_uuid', 'sample_uuid', 'aliquot_uuid', 'disease_type', 'experimental_strategy', 'data_subtype'];\n  var records = [];\n  for (var i=0; i<$job.inputs.input_files.length; i++) {\n    r = []\n    var meta = $job.inputs.input_files[i].metadata;\n    for (var k=0; k<keys.length; k++) {\n      r.push(meta[keys[k]] || '')\n    }\n    records.push(r.join(','));\n  }\n  return '#' + keys.join(',') + '\\n' + records.join('\\n');\n}\n ",
+                  "class": "Expression",
+                  "engine": "#cwl-js-engine"
+                },
+                "filename": {
+                  "script": "// Metadata CSV\n$job.inputs.output_filename.replace(/.*\\/|\\.[^.]*$/g, '') + '_metadata.csv'\n// take processed output_filename and add appropriate suffix",
+                  "class": "Expression",
+                  "engine": "#cwl-js-engine"
+                }
+              },
+              {
+                "fileContent": {
+                  "script": "$job.inputs.input_files.map(function(f){return f.path.split('/').pop()}).join('\\n');\n// create an index file by taking the filename for each input file in the input array\n// an adding each in a new line (\\n)",
+                  "class": "Expression",
+                  "engine": "#cwl-js-engine"
+                },
+                "filename": {
+                  "script": "// Index File\n$job.inputs.output_filename.replace(/.*\\/|\\.[^.]*$/g, '') + '_file.txt'\n// take processed output_filename and add appropriate suffix",
+                  "class": "Expression",
+                  "engine": "#cwl-js-engine"
+                }
+              }
+            ],
+            "class": "CreateFileRequirement"
+          },
+          {
+            "requirements": [
+              {
+                "dockerPull": "rabix/js-engine",
+                "class": "DockerRequirement"
+              }
+            ],
+            "class": "ExpressionEngineRequirement",
+            "id": "#cwl-js-engine"
+          }
+        ],
+        "sbg:revisionsInfo": [
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 0,
+            "sbg:modifiedOn": 1459127745
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 1,
+            "sbg:modifiedOn": 1459128653
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 2,
+            "sbg:modifiedOn": 1459458788
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 3,
+            "sbg:modifiedOn": 1459459375
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 4,
+            "sbg:modifiedOn": 1459459450
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 5,
+            "sbg:modifiedOn": 1459533196
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 6,
+            "sbg:modifiedOn": 1459534622
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 7,
+            "sbg:modifiedOn": 1459536374
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 8,
+            "sbg:modifiedOn": 1459537339
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 9,
+            "sbg:modifiedOn": 1459539326
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 10,
+            "sbg:modifiedOn": 1459596361
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 11,
+            "sbg:modifiedOn": 1462031066
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 12,
+            "sbg:modifiedOn": 1462033400
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 13,
+            "sbg:modifiedOn": 1462203532
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 14,
+            "sbg:modifiedOn": 1463432572
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 15,
+            "sbg:modifiedOn": 1463432819
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 16,
+            "sbg:modifiedOn": 1463611384
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 17,
+            "sbg:modifiedOn": 1463612263
+          }
+        ],
+        "baseCommand": [
+          "python",
+          "munger.py"
+        ],
+        "label": "Gene Expression Munger",
+        "sbg:id": "gauravCGC/gene-expression/gene-expression-munger/17",
+        "sbg:job": {
+          "inputs": {
+            "input_files": [
+              {
+                "path": "/path/to/input_files-1.txt",
+                "metadata": {
+                  "case_id": "TCGA-CM-4746",
+                  "age_at_diagnosis": "61",
+                  "race": "BLACK OR AFRICAN AMERICAN"
+                },
+                "class": "File",
+                "size": 0,
+                "secondaryFiles": []
+              },
+              {
+                "path": "/path/to/input_files-2.txt",
+                "metadata": {
+                  "case_id": "TCGA-CM-1415",
+                  "age_at_diagnosis": "41",
+                  "ethnicity": "BLACK"
+                },
+                "class": "File",
+                "size": 0,
+                "secondaryFiles": []
+              },
+              {
+                "path": "/path/to/input_files-3.txt",
+                "metadata": {
+                  "case_id": "TCGA-AHSOAD",
+                  "age_at_diagnosis": "89"
+                },
+                "size": 0,
+                "secondaryFiles": []
+              }
+            ],
+            "output_filename": "tcga.csv"
+          },
+          "allocatedResources": {
+            "cpu": 1,
+            "mem": 1000
+          }
+        },
+        "sbg:toolAuthor": "Gaurav Kaushik & Boysha Tijanic/Seven Bridges",
+        "sbg:sbgMaintained": false,
+        "sbg:license": "MIT License",
+        "sbg:cmdPreview": "python munger.py -r tcga_file.txt -c -t -o tcga",
+        "sbg:validationErrors": [],
+        "stdin": "",
+        "sbg:createdBy": "gauravCGC",
+        "x": 288.0001722063442,
+        "sbg:toolkitVersion": "1.0",
+        "successCodes": [],
+        "sbg:categories": [
+          "DataScience",
+          "TCGA"
+        ],
+        "id": "gauravCGC/gene-expression/gene-expression-munger/17",
+        "sbg:project": "gauravCGC/gene-expression",
+        "inputs": [
+          {
+            "description": "Used-defined name for the output files (added as a prefix)",
+            "sbg:altPrefix": "--output_filename",
+            "type": [
+              "string"
+            ],
+            "id": "#output_filename",
+            "label": "Output Filename",
+            "required": true,
+            "inputBinding": {
+              "position": 3,
+              "separate": true,
+              "valueFrom": {
+                "script": "// take what the user gives and pop any extensions to prevent silly names like 'file.csv.csv'\n$job.inputs.output_filename.replace(/.*\\/|\\.[^.]*$/g, '')",
+                "class": "Expression",
+                "engine": "#cwl-js-engine"
+              },
+              "prefix": "-o",
+              "sbg:cmdInclude": true
+            },
+            "sbg:toolDefaultValue": "<disease_type>",
+            "sbg:includeInPorts": false
+          },
+          {
+            "description": "Input array of TCGA Level 3 gene expression quantification files",
+            "sbg:altPrefix": "--files",
+            "type": [
+              {
+                "type": "array",
+                "name": "input_files",
+                "items": "File"
+              }
+            ],
+            "label": "Input Files",
+            "required": true,
+            "sbg:fileTypes": "TXT",
+            "id": "#input_files",
+            "sbg:stageInput": "link"
+          }
+        ],
+        "class": "CommandLineTool",
+        "arguments": [
+          {
+            "position": 1,
+            "separate": false,
+            "valueFrom": "-c",
+            "prefix": ""
+          },
+          {
+            "position": 2,
+            "separate": false,
+            "valueFrom": "-t"
+          },
+          {
+            "separate": true,
+            "valueFrom": {
+              "script": "$job.inputs.output_filename.replace(/.*\\/|\\.[^.]*$/g, '') + '_file.txt'",
+              "class": "Expression",
+              "engine": "#cwl-js-engine"
+            },
+            "prefix": "-r"
+          }
+        ],
+        "sbg:contributors": [
+          "gauravCGC"
+        ],
+        "sbg:latestRevision": 17,
+        "outputs": [
+          {
+            "description": "Metadata values for the input files",
+            "type": [
+              "null",
+              "File"
+            ],
+            "outputBinding": {
+              "sbg:metadata": {
+                "num_input_files": {
+                  "script": "$job.inputs.input_files.length",
+                  "class": "Expression",
+                  "engine": "#cwl-js-engine"
+                }
+              },
+              "glob": {
+                "script": "$job.inputs.output_filename.replace(/.*\\/|\\.[^.]*$/g, '') + '_metadata.csv'",
+                "class": "Expression",
+                "engine": "#cwl-js-engine"
+              }
+            },
+            "label": "Metadata Matrix",
+            "fileTypes": "CSV",
+            "id": "#metadata"
+          },
+          {
+            "description": "A file containing a list of the files used in this execution",
+            "type": [
+              "null",
+              "File"
+            ],
+            "outputBinding": {
+              "sbg:inheritMetadataFrom": "#input_files",
+              "sbg:metadata": {
+                "num_input_files": {
+                  "script": "$job.inputs.input_files.length",
+                  "class": "Expression",
+                  "engine": "#cwl-js-engine"
+                }
+              },
+              "glob": {
+                "script": "$job.inputs.output_filename.replace(/.*\\/|\\.[^.]*$/g, '') + '_file.txt'",
+                "class": "Expression",
+                "engine": "#cwl-js-engine"
+              }
+            },
+            "label": "Index File",
+            "fileTypes": "TXT",
+            "id": "#index"
+          },
+          {
+            "description": "Genes by Cases (row by cols)",
+            "type": [
+              "null",
+              "File"
+            ],
+            "outputBinding": {
+              "sbg:inheritMetadataFrom": "#input_files",
+              "sbg:metadata": {
+                "num_input_files": "$job.inputs.input_files.length"
+              },
+              "glob": "*_gene.csv"
+            },
+            "label": "Gene Matrix",
+            "fileTypes": "CSV",
+            "id": "#gene"
+          },
+          {
+            "description": "Transpose of Gene (rows are Cases)",
+            "type": [
+              "null",
+              "File"
+            ],
+            "outputBinding": {
+              "sbg:inheritMetadataFrom": "#input_files",
+              "sbg:metadata": {
+                "num_input_files": {
+                  "script": "$job.inputs.input_files.length",
+                  "class": "Expression",
+                  "engine": "#cwl-js-engine"
+                }
+              },
+              "glob": "*_case.csv"
+            },
+            "label": "Case Matrix",
+            "fileTypes": "CSV",
+            "id": "#case"
+          }
+        ]
+      },
+      "inputs": [
+        {
+          "id": "#Gene_Expression_Munger.output_filename",
+          "source": [
+            "#output_filename"
+          ]
+        },
+        {
+          "id": "#Gene_Expression_Munger.input_files",
+          "source": [
+            "#input_files"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "#Gene_Expression_Munger.metadata"
+        },
+        {
+          "id": "#Gene_Expression_Munger.index"
+        },
+        {
+          "id": "#Gene_Expression_Munger.gene"
+        },
+        {
+          "id": "#Gene_Expression_Munger.case"
+        }
+      ],
+      "sbg:x": 288.0001722063442,
+      "sbg:y": 358.285918994838
+    },
+    {
+      "id": "#Differential_Expression",
+      "run": {
+        "temporaryFailCodes": [],
+        "sbg:revision": 23,
+        "sbg:createdOn": 1463435006,
+        "sbg:modifiedOn": 1464096846,
+        "stdout": "",
+        "sbg:modifiedBy": "gauravCGC",
+        "hints": [
+          {
+            "dockerPull": "gauravkaushik/rnaseq:workshop",
+            "class": "DockerRequirement",
+            "dockerImageId": ""
+          },
+          {
+            "value": 1,
+            "class": "sbg:CPURequirement"
+          },
+          {
+            "value": 1000,
+            "class": "sbg:MemRequirement"
+          },
+          {
+            "value": "c3.xlarge",
+            "class": "sbg:AWSInstanceType"
+          }
+        ],
+        "sbg:image_url": null,
+        "sbg:toolkit": "",
+        "description": "Differential Expression uses the DESeq2 library in R to perform differential expression analysis on consolidated Level 3 TCGA Gene Expression data from RNASeq. It requires two matrices: one with raw counts per gene (row) and per sample (col) and another with metadata attributes per case (row). A model is built from the Sample Type (e.g. Primary Tumor, Solid Tissue Normal) and the Case ID of the patient from whom the sample was taken.",
+        "requirements": [
+          {
+            "requirements": [
+              {
+                "dockerPull": "rabix/js-engine",
+                "class": "DockerRequirement"
+              }
+            ],
+            "class": "ExpressionEngineRequirement",
+            "id": "#cwl-js-engine"
+          },
+          {
+            "fileDef": [
+              {
+                "filename": "diff.R",
+                "fileContent": "# Import libraries\nlibrary(limma)\nlibrary(DESeq2)\nlibrary(pheatmap)\nlibrary(RColorBrewer)\noptions(warn=-1)\nprint(\"Library imports done\")\n\n# Collect arguments from the command line\nargs <- commandArgs(TRUE)\n\n# Read CSV files (harcoded for now)\ngene <- read.csv(args[1], header=TRUE, row.names=1) # get the counts per gene (row) per sample/case (col)\nmeta <- read.csv(args[2], header=TRUE) # get the metadata matrix\nprint(\"CSV files read\")\n\n## For testing only:\n# gene = read.csv(\"brca_gene.csv\", header = TRUE, row.names=1)\n# meta = read.csv(\"brca_meta.csv\", header = TRUE)\ngene = gene[,1:20]\nmeta = meta[1:20,]\n\n# Get the Differential Expression results\nprint(\"Initializing Differential Expression Analysis -- go grab a coffee :)\")\nmeta.df = data.frame(meta)\ndds = DESeqDataSetFromMatrix(countData = gene, colData = meta.df, ~ sample_type + X.case_id)\ndesign(dds) <- ~ sample_type + X.case_id\ndds = DESeq(dds)\n#resultsNames(dds)\nres <- results(dds, contrast = c(\"sample_type\", \"Solid Tissue Normal\", \"Primary Tumor\"))\nresOrdered <- res[order(res$padj),] # order the results by adjusted p-value\nprint(\"Differential Expression analysis DONE!\")\n\n# Output your data report\n'%&%' <- function(x, y)paste0(x,y) # create string concat func\noutput_title <- args[3] %&% \"_rnaseq.csv\"\nwrite.csv(resOrdered, output_title) # output df as csv\nprint(\"Ordered list of adjust p-values recorded per gene as a CSV file\")\n\n#### PLOTS ####\n\n# Create PDF with custom title\nplot_title <- args[4] %&% \"_plots_rnaseq.pdf\"\npdf(plot_title)\n\n# Plot -- Volcano plot\nplotMA(res,main=\"DESeq2\", ylim = c(-4,4))\n\n# Heatmap -- Gene Expression\n#select <- order(rowMeans(counts(dds,normalized=TRUE)), decreasing=TRUE)[1:20]\n#nt <- normTransform(dds) # log2(count+1) normalization \n#log2.norm.counts <- assay(nt)[select,]\n#df <- as.data.frame(colData(dds)[,c(\"sample_type\")])\n#colnames(df) <- \"sample_type\"\n#pheatmap(log2.norm.counts, cluster_rows=FALSE, show_rownames=FALSE, cluster_cols=FALSE, annotation_col=df)\n\n# Heatmap -- Sample-Sample Distance \nrld <- rlog(dds,blind=FALSE)\n#sampleDists <- (dist(t(assay(rld))))\n#sampleDistMatrix <- as.matrix(sampleDists)\n#colnames(sampleDistMatrix) <- NULL\n#colors <- colorRampPalette( rev(brewer.pal(9,\"Blues\")))(255)\n#rownames(sampleDistMatrix) <- paste(rld$condition, rld$sample_type, sep=\"-\")\n#pheatmap(sampleDistMatrix, clustering_distance_rows=sampleDists, clustering_distance_cols=sampleDists,col=colors)\n\n# PCA plot -- sample-type\nplotPCA(rld,intgroup=c(\"sample_type\"))\n\n# Finish up\ndev.off()\nprint(\"PDF plot saved\")\n\n########\n\n# To run in the command line of your Docker container:\n# Rscript diff_exp_rnaseq.R brca_gene.csv brca_meta.csv csv_filename pdf_filename"
+              }
+            ],
+            "class": "CreateFileRequirement"
+          }
+        ],
+        "sbg:revisionsInfo": [
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 0,
+            "sbg:modifiedOn": 1463435006
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 1,
+            "sbg:modifiedOn": 1463436818
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 2,
+            "sbg:modifiedOn": 1463438000
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 3,
+            "sbg:modifiedOn": 1463438083
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 4,
+            "sbg:modifiedOn": 1463439668
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 5,
+            "sbg:modifiedOn": 1463441495
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 6,
+            "sbg:modifiedOn": 1463441509
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 7,
+            "sbg:modifiedOn": 1463442397
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 8,
+            "sbg:modifiedOn": 1463453653
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 9,
+            "sbg:modifiedOn": 1463453845
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 10,
+            "sbg:modifiedOn": 1463454229
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 11,
+            "sbg:modifiedOn": 1463484118
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 12,
+            "sbg:modifiedOn": 1463493404
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 13,
+            "sbg:modifiedOn": 1463611681
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 14,
+            "sbg:modifiedOn": 1464025297
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 15,
+            "sbg:modifiedOn": 1464058865
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 16,
+            "sbg:modifiedOn": 1464086431
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 17,
+            "sbg:modifiedOn": 1464088847
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 18,
+            "sbg:modifiedOn": 1464089590
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 19,
+            "sbg:modifiedOn": 1464092143
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 20,
+            "sbg:modifiedOn": 1464095022
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 21,
+            "sbg:modifiedOn": 1464096281
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 22,
+            "sbg:modifiedOn": 1464096687
+          },
+          {
+            "sbg:modifiedBy": "gauravCGC",
+            "sbg:revision": 23,
+            "sbg:modifiedOn": 1464096846
+          }
+        ],
+        "baseCommand": [
+          "Rscript",
+          "diff.R"
+        ],
+        "label": "Differential Expression",
+        "sbg:id": "gauravCGC/gene-expression/differentialexpression/23",
+        "sbg:job": {
+          "inputs": {
+            "pdf_filename": "pdf_output",
+            "gene": {
+              "path": "/path/to/gene.csv",
+              "class": "File",
+              "size": 0,
+              "secondaryFiles": []
+            },
+            "metadata": {
+              "path": "/path/to/metadata.csv",
+              "class": "File",
+              "size": 0,
+              "secondaryFiles": []
+            },
+            "nmeth": "rld",
+            "csv_filename": "csv_output"
+          },
+          "allocatedResources": {
+            "cpu": 1,
+            "mem": 1000
+          }
+        },
+        "sbg:toolAuthor": "Gaurav Kaushik/Seven Bridges",
+        "sbg:sbgMaintained": false,
+        "sbg:cmdPreview": "Rscript diff.R /path/to/gene.csv /path/to/metadata.csv csv_output pdf_output rld",
+        "sbg:validationErrors": [],
+        "stdin": "",
+        "sbg:createdBy": "gauravCGC",
+        "successCodes": [],
+        "sbg:categories": [
+          "Differential-Expression"
+        ],
+        "id": "gauravCGC/gene-expression/differentialexpression/23",
+        "sbg:project": "gauravCGC/gene-expression",
+        "inputs": [
+          {
+            "label": "Output PDF Filename",
+            "description": "Filename for output PDF",
+            "inputBinding": {
+              "position": 4,
+              "separate": false,
+              "valueFrom": {
+                "script": "$job.inputs.pdf_filename.replace(/.*\\/|\\.[^.]*$/g, '')",
+                "class": "Expression",
+                "engine": "#cwl-js-engine"
+              },
+              "sbg:cmdInclude": true
+            },
+            "type": [
+              "string"
+            ],
+            "id": "#pdf_filename"
+          },
+          {
+            "description": "Method for matrix normalization",
+            "type": [
+              {
+                "type": "enum",
+                "symbols": [
+                  "rld",
+                  "vsd"
+                ],
+                "name": "nmeth"
+              }
+            ],
+            "label": "Normalization Method",
+            "inputBinding": {
+              "position": 4,
+              "separate": false,
+              "sbg:cmdInclude": true
+            },
+            "sbg:toolDefaultValue": "vsd",
+            "id": "#nmeth"
+          },
+          {
+            "description": "Metadata CSV used to make design matrix",
+            "type": [
+              "File"
+            ],
+            "label": "Metadata",
+            "inputBinding": {
+              "position": 2,
+              "separate": false,
+              "sbg:cmdInclude": true
+            },
+            "sbg:fileTypes": "CSV",
+            "id": "#metadata",
+            "sbg:stageInput": "link",
+            "required": true
+          },
+          {
+            "description": "Input matrix of genes (rows) vs samples (cols)",
+            "type": [
+              "File"
+            ],
+            "label": "Gene Matrix",
+            "inputBinding": {
+              "position": 1,
+              "separate": false,
+              "sbg:cmdInclude": true
+            },
+            "sbg:fileTypes": "CSV",
+            "id": "#gene",
+            "sbg:stageInput": "link",
+            "required": true
+          },
+          {
+            "label": "Output CSV Filename",
+            "description": "Filename for output CSV",
+            "inputBinding": {
+              "position": 3,
+              "separate": false,
+              "valueFrom": {
+                "script": "$job.inputs.csv_filename.replace(/.*\\/|\\.[^.]*$/g, '')",
+                "class": "Expression",
+                "engine": "#cwl-js-engine"
+              },
+              "sbg:cmdInclude": true
+            },
+            "type": [
+              "string"
+            ],
+            "id": "#csv_filename"
+          }
+        ],
+        "class": "CommandLineTool",
+        "arguments": [],
+        "sbg:contributors": [
+          "gauravCGC"
+        ],
+        "sbg:latestRevision": 23,
+        "outputs": [
+          {
+            "description": "PDF output report",
+            "type": [
+              "File"
+            ],
+            "outputBinding": {
+              "sbg:inheritMetadataFrom": "#gene",
+              "glob": "*_rnaseq.pdf"
+            },
+            "label": "PDF",
+            "fileTypes": "PDF",
+            "id": "#pdf_output"
+          },
+          {
+            "description": "CSV output file",
+            "type": [
+              "File"
+            ],
+            "outputBinding": {
+              "sbg:inheritMetadataFrom": "#gene",
+              "glob": "*_rnaseq.csv"
+            },
+            "label": "CSV",
+            "fileTypes": "CSV",
+            "id": "#csv_output"
+          }
+        ],
+        "x": 717.7149536756044,
+        "y": 402.5718047667762
+      },
+      "inputs": [
+        {
+          "id": "#Differential_Expression.pdf_filename",
+          "source": [
+            "#pdf_filename"
+          ]
+        },
+        {
+          "id": "#Differential_Expression.nmeth",
+          "source": [
+            "#nmeth"
+          ]
+        },
+        {
+          "id": "#Differential_Expression.metadata",
+          "source": [
+            "#Gene_Expression_Munger.metadata"
+          ]
+        },
+        {
+          "id": "#Differential_Expression.gene",
+          "source": [
+            "#Gene_Expression_Munger.gene"
+          ]
+        },
+        {
+          "id": "#Differential_Expression.csv_filename",
+          "source": [
+            "#csv_filename"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "#Differential_Expression.pdf_output"
+        },
+        {
+          "id": "#Differential_Expression.csv_output"
+        }
+      ],
+      "sbg:x": 717.7149536756044,
+      "sbg:y": 402.5718047667762
+    }
+  ],
+  "requirements": [],
+  "inputs": [
+    {
+      "sbg:y": 352.85718627851963,
+      "type": [
+        {
+          "type": "array",
+          "name": "input_files",
+          "items": "File"
+        }
+      ],
+      "label": "input_files",
+      "sbg:fileTypes": "TXT",
+      "id": "#input_files",
+      "sbg:x": 65.71429355777065
+    },
+    {
+      "description": "Used-defined name for the output files (added as a prefix)",
+      "sbg:altPrefix": "--output_filename",
+      "type": [
+        "string"
+      ],
+      "id": "#output_filename",
+      "label": "Output Filename",
+      "required": true,
+      "sbg:toolDefaultValue": "<disease_type>",
+      "sbg:includeInPorts": false
+    },
+    {
+      "label": "Output CSV Filename",
+      "description": "Filename for output CSV",
+      "type": [
+        "string"
+      ],
+      "id": "#csv_filename"
+    },
+    {
+      "label": "Output PDF Filename",
+      "description": "Filename for output PDF",
+      "type": [
+        "string"
+      ],
+      "id": "#pdf_filename"
+    },
+    {
+      "description": "Method for matrix normalization",
+      "sbg:suggestedValue": "vsd",
+      "type": [
+        {
+          "type": "enum",
+          "symbols": [
+            "rld",
+            "vsd"
+          ],
+          "name": "nmeth"
+        }
+      ],
+      "label": "Normalization Method",
+      "sbg:toolDefaultValue": "vsd",
+      "id": "#nmeth"
+    }
+  ],
+  "outputs": [
+    {
+      "sbg:y": 260.0001060719453,
+      "type": [
+        "null",
+        "File"
+      ],
+      "sbg:includeInPorts": true,
+      "label": "index",
+      "required": false,
+      "sbg:x": 818.571747293297,
+      "id": "#index",
+      "source": [
+        "#Gene_Expression_Munger.index"
+      ]
+    },
+    {
+      "sbg:y": 335.7144088550559,
+      "type": [
+        "File"
+      ],
+      "sbg:includeInPorts": true,
+      "label": "pdf_output",
+      "required": true,
+      "sbg:x": 1018.5717964172575,
+      "id": "#pdf_output",
+      "source": [
+        "#Differential_Expression.pdf_output"
+      ]
+    },
+    {
+      "sbg:y": 465.71447874576364,
+      "type": [
+        "File"
+      ],
+      "sbg:includeInPorts": true,
+      "label": "csv_output",
+      "required": true,
+      "sbg:x": 1014.2859691697859,
+      "id": "#csv_output",
+      "source": [
+        "#Differential_Expression.csv_output"
+      ]
+    },
+    {
+      "sbg:y": 164.2857518293438,
+      "type": [
+        "null",
+        "File"
+      ],
+      "sbg:includeInPorts": true,
+      "label": "metadata",
+      "required": false,
+      "sbg:x": 695.7144395477998,
+      "id": "#metadata",
+      "source": [
+        "#Gene_Expression_Munger.metadata"
+      ]
+    },
+    {
+      "sbg:y": 564.2858795243958,
+      "type": [
+        "null",
+        "File"
+      ],
+      "sbg:includeInPorts": true,
+      "label": "gene",
+      "required": false,
+      "sbg:x": 595.7144796410495,
+      "id": "#gene",
+      "source": [
+        "#Gene_Expression_Munger.gene"
+      ]
+    }
+  ],
+  "sbg:canvas_x": 9,
+  "sbg:createdOn": 1462149845,
+  "sbg:modifiedBy": "gauravCGC",
+  "sbg:image_url": null,
+  "sbg:canvas_y": -76,
+  "sbg:id": "gauravCGC/gene-expression/geneexpressionwf/6",
+  "sbg:sbgMaintained": false,
+  "sbg:project": "gauravCGC/gene-expression",
+  "sbg:validationErrors": [],
+  "sbg:createdBy": "gauravCGC",
+  "sbg:canvas_zoom": 0.6999999999999997,
+  "sbg:revision": 6,
+  "sbg:revisionsInfo": [
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:revision": 0,
+      "sbg:modifiedOn": 1462149845
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:revision": 1,
+      "sbg:modifiedOn": 1463455141
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:revision": 2,
+      "sbg:modifiedOn": 1463455334
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:revision": 3,
+      "sbg:modifiedOn": 1463484136
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:revision": 4,
+      "sbg:modifiedOn": 1463584018
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:revision": 5,
+      "sbg:modifiedOn": 1463612445
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:revision": 6,
+      "sbg:modifiedOn": 1464105589
+    }
+  ],
+  "sbg:modifiedOn": 1464105589,
+  "sbg:contributors": [
+    "gauravCGC"
+  ],
+  "sbg:latestRevision": 6,
+  "id": "gauravCGC/gene-expression/geneexpressionwf/6",
+  "label": "GeneExpressionWF",
+  "description": "",
+  "hints": []
+}

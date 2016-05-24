@@ -23,8 +23,8 @@ gene <- read.csv(args[1], header=TRUE, row.names=1) # get the counts per gene (r
 meta <- read.csv(args[2], header=TRUE) # get the metadata matrix
 
 ## For testing only:
-#gene = read.csv("PanCan_by_gene.csv", header = TRUE, row.names=1)
-#meta = read.csv("PanCan_metadata.csv", header = TRUE)
+#gene = read.csv("brca_gene.csv", header = TRUE, row.names=1)
+#meta = read.csv("brca_metadata.csv", header = TRUE)
 gene = gene[,1:20]
 meta = meta[1:20,]
 

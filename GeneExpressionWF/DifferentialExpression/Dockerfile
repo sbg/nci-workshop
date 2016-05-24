@@ -17,7 +17,7 @@ RUN Rscript -e 'source("http://bioconductor.org/biocLite.R"); biocLite(c("BiocIn
 RUN Rscript -e 'install.packages("pheatmap")'
 
 # Copy the R script and test files
-ADD diff_exp_rnaseq.R /usr/local/bin/
+ADD diff.R /usr/local/bin/
 ADD brca* ./
 RUN chmod a+x /usr/local/bin/diff.R
 # When testing the tool, modify diff.R (see comments ~line 18)

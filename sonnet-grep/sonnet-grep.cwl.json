@@ -1,0 +1,122 @@
+{
+  "id": "https://cgc-api.sbgenomics.com/v2/apps/gauravCGC/cgc-sdk-webinar-may-17/sonnet-grep/7/raw/",
+  "class": "CommandLineTool",
+  "label": "sonnet-grep",
+  "description": "Search for a line in Shakespeare's most famous sonnet.",
+  "requirements": [
+    {
+      "requirements": [
+        {
+          "dockerPull": "rabix/js-engine",
+          "class": "DockerRequirement"
+        }
+      ],
+      "class": "ExpressionEngineRequirement",
+      "id": "#cwl-js-engine"
+    }
+  ],
+  "inputs": [
+    {
+      "label": "Pattern",
+      "inputBinding": {
+        "position": 1,
+        "separate": false,
+        "valueFrom": {
+          "script": "\"'\" + $job.inputs.pattern + \"'\" ",
+          "class": "Expression",
+          "engine": "#cwl-js-engine"
+        },
+        "sbg:cmdInclude": true
+      },
+      "description": "Input a pattern that you want to use to search for lines in the text file",
+      "type": [
+        "string"
+      ],
+      "id": "#pattern"
+    },
+    {
+      "description": "Input file from which to find a pattern",
+      "type": [
+        "null",
+        "File"
+      ],
+      "label": "Input File",
+      "inputBinding": {
+        "position": 2,
+        "separate": false,
+        "sbg:cmdInclude": true
+      },
+      "sbg:fileTypes": "TXT",
+      "id": "#file"
+    }
+  ],
+  "outputs": [
+    {
+      "type": [
+        "null",
+        "File"
+      ],
+      "id": "#output_file",
+      "outputBinding": {
+        "glob": "output.txt"
+      }
+    },
+    {
+      "type": [
+        "null",
+        "File"
+      ],
+      "id": "#sonnet",
+      "outputBinding": {
+        "glob": "sonnet.txt"
+      }
+    }
+  ],
+  "hints": [
+    {
+      "value": 1,
+      "class": "sbg:CPURequirement"
+    },
+    {
+      "value": 1000,
+      "class": "sbg:MemRequirement"
+    },
+    {
+      "dockerPull": "ubuntu:latest",
+      "class": "DockerRequirement",
+      "dockerImageId": ""
+    },
+    {
+      "value": "m1.small",
+      "class": "sbg:AWSInstanceType"
+    }
+  ],
+  "baseCommand": [
+    "grep"
+  ],
+  "stdin": "",
+  "stdout": "output.txt",
+  "successCodes": [],
+  "temporaryFailCodes": [],
+  "arguments": [],
+  "sbg:createdOn": 1463501041,
+  "sbg:job": {
+    "inputs": {
+      "pattern": "pattern-string-value",
+      "file": {
+        "path": "/path/to/input.txt",
+        "class": "File",
+        "size": 0,
+        "secondaryFiles": []
+      }
+    },
+    "allocatedResources": {
+      "cpu": 1,
+      "mem": 1000
+    }
+  },
+  "sbg:image_url": null,
+  "sbg:sbgMaintained": false,
+  "sbg:cmdPreview": "grep 'pattern-string-value' > output.txt",
+  "sbg:validationErrors": [],
+}

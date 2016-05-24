@@ -1,0 +1,508 @@
+{
+  "label": "dna2protein",
+  "inputs": [
+    {
+      "type": [
+        "null",
+        "string"
+      ],
+      "id": "#output_filename",
+      "description": "Optional output_filename string"
+    },
+    {
+      "label": "input_file",
+      "sbg:y": 157,
+      "id": "#input_file",
+      "sbg:x": 102,
+      "type": [
+        "File"
+      ]
+    }
+  ],
+  "requirements": [],
+  "description": "A workflow that converts DNA sequences into peptides.",
+  "steps": [
+    {
+      "inputs": [
+        {
+          "id": "#Transcribe.input_file",
+          "source": [
+            "#input_file"
+          ]
+        },
+        {
+          "default": true,
+          "id": "#Transcribe.verbose"
+        },
+        {
+          "id": "#Transcribe.output_filename"
+        }
+      ],
+      "sbg:x": 311,
+      "outputs": [
+        {
+          "id": "#Transcribe.output_file_glob"
+        }
+      ],
+      "sbg:y": 212.6007080078125,
+      "id": "#Transcribe",
+      "run": {
+        "sbg:modifiedOn": 1453392533,
+        "sbg:toolAuthor": "Gaurav Kaushik/Seven Bridges",
+        "sbg:project": "gauravCGC/fog",
+        "sbg:categories": [
+          "Tutorials"
+        ],
+        "requirements": [
+          {
+            "class": "CreateFileRequirement",
+            "fileDef": [
+              {
+                "filename": "transcribe_argparse.py",
+                "fileContent": "#!/usr/bin/env/python\nimport argparse\nimport re\nimport sys\n\ndef transcribe(args):\n\t# create a transcription map and use regex to translate\n\tmap = {\"A\":\"U\", \"T\":\"A\", \"C\":\"G\", \"G\":\"C\"}\n\tmap = dict((re.escape(k), v) for k, v in map.iteritems())\n\tpattern = re.compile(\"|\".join(map.keys()))\n\tDNA = args['dna'].read().strip()\n\tmRNA = pattern.sub(lambda m: map[re.escape(m.group(0))], DNA)\n\n\t# write a verbose output to stderr and just mRNA to sdtout \n\tif args['verbose']:\n\t\tsys.stderr.write(\"Your original DNA sequence: \" + DNA + \"\\n\")\n\t\tsys.stderr.write(\"Your translated mRNA sequence: \" + mRNA + \"\\n\")\n\tsys.stdout.write(mRNA + '\\n')\n\tsys.exit(0)\n\treturn mRNA\n\nif __name__ == \"__main__\":\n\t\"\"\" Parse the command line arguments \"\"\"\n\tparser = argparse.ArgumentParser()\n\tparser.add_argument(\"-d\", \"--dna\", type=argparse.FileType(\"r\"), default=sys.stdin)\n\tparser.add_argument(\"-v\", \"--verbose\", action=\"store_true\", default=False)\n\t# By setting args as var(...), it becomes a dict, so 'dna' is a key\n\t# Alternative use: args = parser.parse_args(), and 'dna' is an attr of args!\n\t# You must change how you call the args you parse based on this usage! \n\targs = vars(parser.parse_args())\n\n\t\"\"\" Run the desired methods \"\"\"\n\ttranscribe(args)"
+              }
+            ]
+          },
+          {
+            "id": "#cwl-js-engine",
+            "requirements": [
+              {
+                "class": "DockerRequirement",
+                "dockerPull": "rabix/js-engine"
+              }
+            ],
+            "class": "ExpressionEngineRequirement"
+          }
+        ],
+        "sbg:contributors": [
+          "gauravCGC"
+        ],
+        "sbg:id": "gauravCGC/fog/transcribe-argparse/16",
+        "sbg:modifiedBy": "gauravCGC",
+        "label": "Transcribe",
+        "inputs": [
+          {
+            "sbg:fileTypes": "TXT",
+            "type": [
+              "File"
+            ],
+            "id": "#input_file",
+            "description": "Input file",
+            "inputBinding": {
+              "position": 3,
+              "sbg:cmdInclude": true,
+              "separate": true,
+              "prefix": "-d"
+            }
+          },
+          {
+            "type": [
+              "null",
+              "boolean"
+            ],
+            "id": "#verbose",
+            "inputBinding": {
+              "position": 4,
+              "sbg:cmdInclude": true,
+              "separate": true,
+              "prefix": "--verbose"
+            }
+          },
+          {
+            "type": [
+              "null",
+              "string"
+            ],
+            "id": "#output_filename",
+            "description": "Specify output filename"
+          }
+        ],
+        "sbg:sbgMaintained": false,
+        "class": "CommandLineTool",
+        "outputs": [
+          {
+            "type": [
+              "File"
+            ],
+            "outputBinding": {
+              "glob": "*.txt"
+            },
+            "id": "#output_file_glob"
+          }
+        ],
+        "sbg:createdOn": 1452782707,
+        "sbg:validationErrors": [],
+        "description": "This project was created to demonstrate the use of argparse to create CLI tools in Python, wrap them using CWL/SDK.v2, and running them.\n\nThis tool takes a TXT file with a DNA sequence and converts to an RNA sequence.",
+        "sbg:cmdPreview": "python transcribe_argparse.py -d /path/to/input_file.ext > rna_test_file.txt",
+        "temporaryFailCodes": [],
+        "sbg:createdBy": "gauravCGC",
+        "baseCommand": [
+          "python",
+          "transcribe_argparse.py"
+        ],
+        "arguments": [],
+        "sbg:revisionsInfo": [
+          {
+            "sbg:modifiedOn": 1452782872,
+            "sbg:revision": 1,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452783176,
+            "sbg:revision": 2,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452782707,
+            "sbg:revision": 0,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452784556,
+            "sbg:revision": 7,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452783230,
+            "sbg:revision": 3,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452783261,
+            "sbg:revision": 4,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452783713,
+            "sbg:revision": 5,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452784339,
+            "sbg:revision": 6,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452784883,
+            "sbg:revision": 8,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452785042,
+            "sbg:revision": 9,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452785234,
+            "sbg:revision": 10,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452786627,
+            "sbg:revision": 11,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452876862,
+            "sbg:revision": 12,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452884518,
+            "sbg:revision": 13,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1453029319,
+            "sbg:revision": 14,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1453390047,
+            "sbg:revision": 15,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1453392533,
+            "sbg:revision": 16,
+            "sbg:modifiedBy": "gauravCGC"
+          }
+        ],
+        "sbg:latestRevision": 16,
+        "sbg:revision": 16,
+        "successCodes": [],
+        "stdin": "",
+        "hints": [
+          {
+            "class": "sbg:CPURequirement",
+            "value": 1
+          },
+          {
+            "class": "sbg:MemRequirement",
+            "value": 1000
+          },
+          {
+            "class": "DockerRequirement",
+            "dockerPull": "rfranklin/pythondev",
+            "dockerImageId": ""
+          }
+        ],
+        "id": "https://cgc-api.sbgenomics.com/gauravCGC/fog/transcribe-argparse/16/raw/",
+        "stdout": {
+          "script": "($job.inputs.output_filename || 'rna') + '.txt'",
+          "class": "Expression",
+          "engine": "#cwl-js-engine"
+        },
+        "sbg:job": {
+          "inputs": {
+            "output_filename": "rna_test_file",
+            "verbose": true,
+            "input_file": {
+              "secondaryFiles": [],
+              "class": "File",
+              "size": 0,
+              "path": "/path/to/input_file.ext"
+            }
+          },
+          "allocatedResources": {
+            "mem": 1000,
+            "cpu": 1
+          }
+        }
+      }
+    },
+    {
+      "inputs": [
+        {
+          "id": "#Translate.input_file",
+          "source": [
+            "#Transcribe.output_file_glob"
+          ]
+        },
+        {
+          "id": "#Translate.output_filename",
+          "source": [
+            "#output_filename"
+          ]
+        }
+      ],
+      "sbg:x": 564,
+      "outputs": [
+        {
+          "id": "#Translate.output_protein"
+        }
+      ],
+      "sbg:y": 197.60069274902344,
+      "id": "#Translate",
+      "run": {
+        "sbg:modifiedOn": 1453392588,
+        "sbg:toolAuthor": "Gaurav Kaushik/Seven Bridges",
+        "sbg:project": "gauravCGC/fog",
+        "requirements": [
+          {
+            "class": "CreateFileRequirement",
+            "fileDef": [
+              {
+                "filename": "translate.py",
+                "fileContent": "#!/usr/bin/env/python\nimport argparse\nimport sys\n\ndef translate(args):\n\tmRNA = args['mRNA'].read().strip()\n\tcodon_map = {\"UUU\":\"F\", \"UUC\":\"F\", \"UUA\":\"L\", \"UUG\":\"L\",\n    \"UCU\":\"S\", \"UCC\":\"S\", \"UCA\":\"S\", \"UCG\":\"S\",\n    \"UAU\":\"Y\", \"UAC\":\"Y\", \"UAA\":\"STOP\", \"UAG\":\"STOP\",\n    \"UGU\":\"C\", \"UGC\":\"C\", \"UGA\":\"STOP\", \"UGG\":\"W\",\n    \"CUU\":\"L\", \"CUC\":\"L\", \"CUA\":\"L\", \"CUG\":\"L\",\n    \"CCU\":\"P\", \"CCC\":\"P\", \"CCA\":\"P\", \"CCG\":\"P\",\n    \"CAU\":\"H\", \"CAC\":\"H\", \"CAA\":\"Q\", \"CAG\":\"Q\",\n    \"CGU\":\"R\", \"CGC\":\"R\", \"CGA\":\"R\", \"CGG\":\"R\",\n    \"AUU\":\"I\", \"AUC\":\"I\", \"AUA\":\"I\", \"AUG\":\"M\",\n    \"ACU\":\"T\", \"ACC\":\"T\", \"ACA\":\"T\", \"ACG\":\"T\",\n    \"AAU\":\"N\", \"AAC\":\"N\", \"AAA\":\"K\", \"AAG\":\"K\",\n    \"AGU\":\"S\", \"AGC\":\"S\", \"AGA\":\"R\", \"AGG\":\"R\",\n    \"GUU\":\"V\", \"GUC\":\"V\", \"GUA\":\"V\", \"GUG\":\"V\",\n    \"GCU\":\"A\", \"GCC\":\"A\", \"GCA\":\"A\", \"GCG\":\"A\",\n    \"GAU\":\"D\", \"GAC\":\"D\", \"GAA\":\"E\", \"GAG\":\"E\",\n    \"GGU\":\"G\", \"GGC\":\"G\", \"GGA\":\"G\", \"GGG\":\"G\",}\n\n\tprotein = ''\n\t# find the start codon and proceed until a 'STOP'\n\tstart = mRNA.find('AUG')\n\tif start != -1:\n\t\twhile start+2 < len(mRNA):\n\t\t\tprotein += codon_map[mRNA[start:start+3]]\n\t\t\tstart += 3\n\t\tprotein = protein[:protein.find('STOP')]\n\tprint protein\n\nif __name__ == \"__main__\":\n\t\"\"\" Parse the command line arguments \"\"\"\n\tparser = argparse.ArgumentParser()\n\tparser.add_argument(\"-r\", \"--mRNA\", type=argparse.FileType('r'), default=sys.stdin)\n\targs = vars(parser.parse_args())\n\n\t\"\"\" Run the main method \"\"\"\n\ttranslate(args)"
+              }
+            ]
+          },
+          {
+            "id": "#cwl-js-engine",
+            "requirements": [
+              {
+                "class": "DockerRequirement",
+                "dockerPull": "rabix/js-engine"
+              }
+            ],
+            "class": "ExpressionEngineRequirement"
+          }
+        ],
+        "sbg:contributors": [
+          "gauravCGC"
+        ],
+        "sbg:id": "gauravCGC/fog/translate-argparse/12",
+        "sbg:modifiedBy": "gauravCGC",
+        "label": "Translate",
+        "inputs": [
+          {
+            "sbg:fileTypes": "TXT",
+            "type": [
+              "File"
+            ],
+            "id": "#input_file",
+            "description": "Input file with mRNA sequence",
+            "inputBinding": {
+              "position": 3,
+              "sbg:cmdInclude": true,
+              "separate": true,
+              "prefix": "-r"
+            }
+          },
+          {
+            "type": [
+              "null",
+              "string"
+            ],
+            "id": "#output_filename",
+            "description": "Optional output_filename string"
+          }
+        ],
+        "sbg:sbgMaintained": false,
+        "class": "CommandLineTool",
+        "outputs": [
+          {
+            "sbg:fileTypes": "TXT",
+            "type": [
+              "File"
+            ],
+            "outputBinding": {
+              "glob": "*.txt"
+            },
+            "id": "#output_protein",
+            "description": "Output protein sequence"
+          }
+        ],
+        "sbg:createdOn": 1452783486,
+        "sbg:validationErrors": [],
+        "description": "This tool allows you to take an RNA sequence and translate to a protein product based on the first detected ORF.",
+        "sbg:cmdPreview": "python translate.py -r input_mRNA.txt > output_filename.txt",
+        "temporaryFailCodes": [],
+        "sbg:createdBy": "gauravCGC",
+        "baseCommand": [
+          "python",
+          "translate.py"
+        ],
+        "arguments": [],
+        "sbg:revisionsInfo": [
+          {
+            "sbg:modifiedOn": 1452783486,
+            "sbg:revision": 0,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452784433,
+            "sbg:revision": 5,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452783590,
+            "sbg:revision": 2,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452783560,
+            "sbg:revision": 1,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452783808,
+            "sbg:revision": 4,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452783596,
+            "sbg:revision": 3,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452785657,
+            "sbg:revision": 6,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452877055,
+            "sbg:revision": 7,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452884501,
+            "sbg:revision": 8,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452903482,
+            "sbg:revision": 9,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1452903558,
+            "sbg:revision": 10,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1453029998,
+            "sbg:revision": 11,
+            "sbg:modifiedBy": "gauravCGC"
+          },
+          {
+            "sbg:modifiedOn": 1453392588,
+            "sbg:revision": 12,
+            "sbg:modifiedBy": "gauravCGC"
+          }
+        ],
+        "sbg:latestRevision": 12,
+        "sbg:revision": 12,
+        "successCodes": [],
+        "stdin": "",
+        "hints": [
+          {
+            "class": "sbg:CPURequirement",
+            "value": 1
+          },
+          {
+            "class": "sbg:MemRequirement",
+            "value": 1000
+          },
+          {
+            "class": "DockerRequirement",
+            "dockerPull": "rfranklin/pythondev",
+            "dockerImageId": ""
+          }
+        ],
+        "id": "https://cgc-api.sbgenomics.com/gauravCGC/fog/translate-argparse/12/raw/",
+        "stdout": {
+          "script": "($job.inputs.output_filename || 'protein') + '.txt'",
+          "class": "Expression",
+          "engine": "#cwl-js-engine"
+        },
+        "sbg:job": {
+          "inputs": {
+            "output_filename": "output_filename",
+            "input_file": {
+              "secondaryFiles": [],
+              "class": "File",
+              "size": 0,
+              "path": "input_mRNA.txt"
+            }
+          },
+          "allocatedResources": {
+            "mem": 1000,
+            "cpu": 1
+          }
+        }
+      }
+    }
+  ],
+  "class": "Workflow",
+  "outputs": [
+    {
+      "label": "output_protein",
+      "id": "#output_protein",
+      "sbg:x": 871,
+      "sbg:y": 173,
+      "type": [
+        "File"
+      ],
+      "source": [
+        "#Translate.output_protein"
+      ],
+      "sbg:includeInPorts": true
+    }
+  ],
+  "hints": [],
+  "sbg:canvas_x": 187,
+  "id": "https://cgc-api.sbgenomics.com/v2/apps/gauravCGC/cgc-sdk-webinar-may-17/dna2protein/0/raw/",
+  "sbg:canvas_y": 71
+}

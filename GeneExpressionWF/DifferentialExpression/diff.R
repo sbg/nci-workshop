@@ -1,3 +1,13 @@
+####
+# diff.R is a script that runs a differential expression analysis on RNASeq data (counts)
+# To run in the command line:
+# Rscript diff.R brca_gene.csv brca_meta.csv csv_filename pdf_filename <rld | vsd>
+#   where:  brca_gene.csv is a matrix of genes vs samples
+#           brca_meta.csv is a matrix of samples vs metadata (e.g. sample_type, gender)
+#           *_filename is the desired prefix for your output files
+#           <rld | vsd> is your choice of normalization method (use "rld" or "vsd" without quotes)
+###
+
 # Import libraries
 library(limma)
 library(DESeq2)
@@ -75,8 +85,3 @@ plotPCA(nmeth,intgroup=c("sample_type"))
 # Finish up
 dev.off()
 print("PDF plot saved")
-
-########
-
-# To run in the command line of your Docker container:
-# Rscript diff.R brca_gene.csv brca_meta.csv csv_filename pdf_filename <rld | vsd>

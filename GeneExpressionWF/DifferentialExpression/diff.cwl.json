@@ -1,6 +1,6 @@
 {
   "temporaryFailCodes": [],
-  "sbg:revision": 14,
+  "sbg:revision": 1,
   "sbg:modifiedBy": "gauravCGC",
   "hints": [
     {
@@ -8,32 +8,27 @@
       "class": "sbg:CPURequirement"
     },
     {
-      "value": 8000,
+      "value": 32000,
       "class": "sbg:MemRequirement"
     },
     {
       "dockerPull": "gauravkaushik/rnaseq:latest",
       "class": "DockerRequirement",
       "dockerImageId": ""
-    },
-    {
-      "value": "c3.xlarge",
-      "class": "sbg:AWSInstanceType"
     }
   ],
   "sbg:image_url": null,
-  "id": "https://cgc-api.sbgenomics.com/v2/apps/gauravCGC/gene-expression/differentialexpression/14/raw/",
+  "id": "https://cgc-api.sbgenomics.com/v2/apps/gauravCGC/cgc-sdk-webinar-may-17/differentialexpression/1/raw/",
   "baseCommand": [
     "Rscript",
     "diff.R"
   ],
   "sbg:toolAuthor": "Gaurav Kaushik/Seven Bridges",
-  "sbg:cmdPreview": "Rscript diff.R /path/to/gene.csv /path/to/metadata.csv csv_output pdf_output",
+  "sbg:cmdPreview": "Rscript diff.R /path/to/gene.csv /path/to/metadata.csv csv_output pdf_output rld",
   "stdin": "",
   "sbg:createdBy": "gauravCGC",
   "sbg:categories": [
-    "Differential-Expression",
-    "Data-Science"
+    "Differential-Expression"
   ],
   "inputs": [
     {
@@ -101,9 +96,30 @@
       "type": [
         "string"
       ]
+    },
+    {
+      "description": "Normalization method used in the analysis",
+      "type": [
+        {
+          "name": "normalization_method",
+          "symbols": [
+            "rld",
+            "vsd"
+          ],
+          "type": "enum"
+        }
+      ],
+      "label": "Normalization Method",
+      "inputBinding": {
+        "position": 4,
+        "separate": false,
+        "sbg:cmdInclude": true
+      },
+      "sbg:toolDefaultValue": "rld",
+      "id": "#normalization_method"
     }
   ],
-  "sbg:latestRevision": 14,
+  "sbg:latestRevision": 1,
   "outputs": [
     {
       "description": "PDF output report",
@@ -132,7 +148,7 @@
       "id": "#csv_output"
     }
   ],
-  "sbg:createdOn": 1463435006,
+  "sbg:createdOn": 1463500986,
   "stdout": "",
   "sbg:job": {
     "inputs": {
@@ -149,14 +165,15 @@
         "size": 0,
         "secondaryFiles": []
       },
+      "normalization_method": "rld",
       "csv_filename": "csv_output"
     },
     "allocatedResources": {
       "cpu": 4,
-      "mem": 8000
+      "mem": 32000
     }
   },
-  "sbg:toolkit": "DataScience",
+  "sbg:toolkit": "",
   "requirements": [
     {
       "requirements": [
@@ -171,7 +188,7 @@
     {
       "fileDef": [
         {
-          "fileContent": "# Import libraries\nlibrary(limma)\nlibrary(DESeq2)\nlibrary(pheatmap)\nlibrary(RColorBrewer)\noptions(warn=-1)\nprint(\"Library imports done\")\n\n# Collect arguments from the command line\nargs <- commandArgs(TRUE)\n\n# Read CSV files (harcoded for now)\ngene <- read.csv(args[1], header=TRUE, row.names=1) # get the counts per gene (row) per sample/case (col)\nmeta <- read.csv(args[2], header=TRUE) # get the metadata matrix\nprint(\"CSV files read\")\n\n## For testing only:\n# gene = read.csv(\"brca_gene.csv\", header = TRUE, row.names=1)\n# meta = read.csv(\"brca_meta.csv\", header = TRUE)\n#gene = gene[,1:20]\n#meta = meta[1:20,]\n\n# Get the Differential Expression results\nprint(\"Initializing Differential Expression Analysis -- go grab a coffee :)\")\nmeta.df = data.frame(meta)\ndds = DESeqDataSetFromMatrix(countData = gene, colData = meta.df, ~ sample_type + X.case_id)\ndesign(dds) <- ~ sample_type + X.case_id\ndds = DESeq(dds)\n#resultsNames(dds)\nres <- results(dds, contrast = c(\"sample_type\", \"Solid Tissue Normal\", \"Primary Tumor\"))\nresOrdered <- res[order(res$padj),] # order the results by adjusted p-value\nprint(\"Differential Expression analysis DONE!\")\n\n# Output your data report\n'%&%' <- function(x, y)paste0(x,y) # create string concat func\noutput_title <- args[3] %&% \"_rnaseq.csv\"\nwrite.csv(resOrdered, output_title) # output df as csv\nprint(\"Ordered list of adjust p-values recorded per gene as a CSV file\")\n\n#### PLOTS ####\n\n# Create PDF with custom title\nplot_title <- args[4] %&% \"_plots_rnaseq.pdf\"\npdf(plot_title)\n\n# Plot -- Volcano plot\nplotMA(res,main=\"DESeq2\", ylim = c(-4,4))\n\n# Heatmap -- Gene Expression\nselect <- order(rowMeans(counts(dds,normalized=TRUE)), decreasing=TRUE)[1:20]\nnt <- normTransform(dds) # log2(count+1) normalization \nlog2.norm.counts <- assay(nt)[select,]\ndf <- as.data.frame(colData(dds)[,c(\"sample_type\")])\ncolnames(df) <- \"sample_type\"\npheatmap(log2.norm.counts, cluster_rows=FALSE, show_rownames=FALSE, cluster_cols=FALSE, annotation_col=df)\n\n# Heatmap -- Sample-Sample Distance \nvsd <- varianceStabilizingTransformation(dds, blind=FALSE)\nsampleDists <- (dist(t(assay(vsd))))\nsampleDistMatrix <- as.matrix(sampleDists)\ncolnames(sampleDistMatrix) <- NULL\ncolors <- colorRampPalette( rev(brewer.pal(9,\"Blues\")))(255)\nrownames(sampleDistMatrix) <- paste(vsd$condition, vsd$sample_type, sep=\"-\")\npheatmap(sampleDistMatrix, clustering_distance_rows=sampleDists, clustering_distance_cols=sampleDists,col=colors)\n\n# PCA plot -- sample-type\nplotPCA(vsd,intgroup=c(\"sample_type\"))\n\n# Finish up\ndev.off()\nprint(\"PDF plot saved\")\n\n########\n\n# To run in the command line of your Docker container:\n# Rscript diff_exp_rnaseq.R brca_gene.csv brca_meta.csv csv_filename pdf_filename",
+          "fileContent": "####\n# diff.R is a script that runs a differential expression analysis on RNASeq data (counts)\n# To run in the command line:\n# Rscript diff.R brca_gene.csv brca_meta.csv csv_filename pdf_filename <rld | vsd>\n#   where:  brca_gene.csv is a matrix of genes vs samples\n#           brca_meta.csv is a matrix of samples vs metadata (e.g. sample_type, gender)\n#           *_filename is the desired prefix for your output files\n#           <rld | vsd> is your choice of normalization method (use \"rld\" or \"vsd\" without quotes)\n###\n\n# Import libraries\nlibrary(limma)\nlibrary(DESeq2)\nlibrary(pheatmap)\nlibrary(RColorBrewer)\noptions(warn=-1)\nprint(\"Libraries Imported\")\n\n# Read CSV files (harcoded for now)\n# Collect arguments from the command line\nargs <- commandArgs(TRUE)\ngene <- read.csv(args[1], header=TRUE, row.names=1) # get the counts per gene (row) per sample/case (col)\nmeta <- read.csv(args[2], header=TRUE) # get the metadata matrix\n\n## For testing only:\n#gene = read.csv(\"PanCan_by_gene.csv\", header = TRUE, row.names=1)\n#meta = read.csv(\"PanCan_metadata.csv\", header = TRUE)\ngene = gene[,1:20]\nmeta = meta[1:20,]\n\nprint(\"CSV Files Read\")\n\n# Get the Differential Expression results\nprint(\"Initializing Differential Expression Analysis -- go grab a coffee :)\")\nmeta.df = data.frame(meta)\ndds = DESeqDataSetFromMatrix(countData = gene, colData = meta.df, ~ sample_type + X.case_id)\ndesign(dds) <- ~ sample_type + X.case_id\ndds = DESeq(dds)\n#resultsNames(dds)\nres <- results(dds, contrast = c(\"sample_type\", \"Solid Tissue Normal\", \"Primary Tumor\"))\nresOrdered <- res[order(res$padj),] # order the results by adjusted p-value\nprint(\"Differential Expression analysis DONE!\")\n\n# Output your data report\n'%&%' <- function(x, y)paste0(x,y) # create string concat func\noutput_title <- args[3] %&% \"_rnaseq.csv\"\nwrite.csv(resOrdered, output_title) # output df as csv\n\n#### PLOTS ####\n\n# Create PDF with custom title\nplot_title <- args[4] %&% \"_plots_rnaseq.pdf\"\npdf(plot_title)\n\n# Plot -- Volcano plot\nplotMA(res,main=\"DESeq2\", ylim = c(-4,4))\n\n# Heatmap -- Gene Expression by Sample Type\nselect <- order(rowMeans(counts(dds,normalized=TRUE)), decreasing=TRUE)[1:200]\nnt <- normTransform(dds) # log2(count+1) normalization \nlog2.norm.counts <- assay(nt)[select,]\ndf <- as.data.frame(colData(dds)[,c(\"sample_type\")])\ncolnames(df) <- \"sample_type\"\npheatmap(log2.norm.counts, cluster_rows=FALSE, show_rownames=FALSE, cluster_cols=FALSE, annotation_col=df)\n\n# Set up normalization method\nnormalization_method <- args[5]\nif (normalization_method == \"rld\") {\n    nmeth <- rlog(dds,blind=FALSE)\n} else if (normalization_method == \"vsd\") {\n    nmeth <- varianceStabilizingTransformation(dds, blind=FALSE)\n}\n\n# Heatmap -- Sample-Sample Distance \nsampleDists <- (dist(t(assay(nmeth))))\nsampleDistMatrix <- as.matrix(sampleDists)\ncolnames(sampleDistMatrix) <- NULL\ncolors <- colorRampPalette(rev(brewer.pal(9,\"Blues\")))(255)\nrownames(sampleDistMatrix) <- paste(nmeth$condition, nmeth$sample_type, sep=\"-\")\npheatmap(sampleDistMatrix, clustering_distance_rows=sampleDists, clustering_distance_cols=sampleDists,col=colors)\n\n# PCA plot -- sample-type\nplotPCA(nmeth,intgroup=c(\"sample_type\"))\n\n# Finish up\ndev.off()\nprint(\"PDF plot saved\")",
           "filename": "diff.R"
         }
       ],
@@ -179,11 +196,9 @@
     }
   ],
   "label": "Differential Expression",
-  "sbg:sbgMaintained": false,
-  "sbg:license": "MIT License",
   "sbg:validationErrors": [],
   "successCodes": [],
-  "sbg:modifiedOn": 1464025297,
+  "sbg:modifiedOn": 1464058728,
   "description": "Differential Expression uses the DESeq2 library in R to perform differential expression analysis on consolidated Level 3 TCGA Gene Expression data from RNASeq. It requires two matrices: one with raw counts per gene (row) and per sample (col) and another with metadata attributes per case (row). A model is built from the Sample Type (e.g. Primary Tumor, Solid Tissue Normal) and the Case ID of the patient from whom the sample was taken.",
   "class": "CommandLineTool",
   "arguments": []

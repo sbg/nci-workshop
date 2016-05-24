@@ -1,0 +1,3 @@
+sevenbridges-python
+pyyaml
+futures

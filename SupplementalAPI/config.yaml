@@ -1,0 +1,30 @@
+# File path for logging details.
+log_file : star.log
+
+# Target project identifier where analysis will be executed
+# Can be obtained from the API or the project URL
+project : <Project identifier username/project-short-name>
+
+# Target app on which to execute analysis
+# Can be obtained from the API or the project URL
+app : <App identifier username/project-short-name/app-short-name>
+
+inputs:
+  # Input for archives! All files that end with tar.gz
+  # If input identifiers are changed so should be the script.
+  input_archive_file: <tar.gz>
+
+  # Input sjdbGTFfile
+  sjdbGTFfile: gencode.v24.primary_assembly.annotation.gtf
+
+  # Input genome
+  genome: genome.tar
+
+# Max task numbers per run! Please be careful when using this option!
+task_max_per_run: 200
+
+# CGC API Token
+token : <insert your CGC token>
+
+# CGC Api URL
+api-url : https://cgc-api.sbgenomics.com/v2

@@ -27,13 +27,13 @@ You can import any CWL JSON in these projects as a tool into the Cancer Genomics
 1. In a project on the CGC, navigate to the Apps tab, then 'Add App'
 
 2. Input a name for your app:
-![alt-tag](https://raw.githubusercontent.com/gaurav-kaushik/cgc-sdk-webinar/master/img/img_createapp.png?token=AJDJU9mF-6lRfb5w3KmZmmRQDPmjsS3Cks5XTKN3wA%3D%3D)
+![alt-tag](https://raw.githubusercontent.com/sbg/nci-workshop/master/img/img_createapp.png?token=AJDJU9mF-6lRfb5w3KmZmmRQDPmjsS3Cks5XTKN3wA%3D%3D)
 3. In the Tool Editor, click on '...' on the upper-right and then select 'Import':
-![alt-tag](https://raw.githubusercontent.com/gaurav-kaushik/cgc-sdk-webinar/master/img/img_importmenu.png?token=AJDJU-B_a6Vl9mF_3mznB0_WrA2QalA5ks5XTKQpwA%3D%3D)
+![alt-tag](https://raw.githubusercontent.com/sbg/nci-workshop/master/img/img_importmenu.png?token=AJDJU-B_a6Vl9mF_3mznB0_WrA2QalA5ks5XTKQpwA%3D%3D)
 4. You will see a blank window. Paste the contents of the CWL JSON file (*.cwl.json) from this repo:
-![alt-tag](https://raw.githubusercontent.com/gaurav-kaushik/cgc-sdk-webinar/master/img/img_importempty.png?token=AJDJU5IDS3j4e3txDQLLdaMS8dU99qSlks5XTKT6wA%3D%3D)
-![alt-tag](https://raw.githubusercontent.com/gaurav-kaushik/cgc-sdk-webinar/master/img/img_importfilled.png?token=AJDJU5K1Yc0WQ5jrZfEqx6Ymgw7hkq1Yks5XTKUVwA%3D%3D
+![alt-tag](https://raw.githubusercontent.com/sbg/nci-workshop/master/img/img_importempty.png?token=AJDJU5IDS3j4e3txDQLLdaMS8dU99qSlks5XTKT6wA%3D%3D)
+![alt-tag](https://raw.githubusercontent.com/sbg/nci-workshop/master/img/img_importfilled.png?token=AJDJU5K1Yc0WQ5jrZfEqx6Ymgw7hkq1Yks5XTKUVwA%3D%3D
 )
 5. Click 'Import'. You will see the appropriate fields in the Tool Editor window:
-![alt-tag](https://raw.githubusercontent.com/gaurav-kaushik/cgc-sdk-webinar/master/img/img_importcomplete.png?token=AJDJU7LY2-TlVJBjmzaVrUTt9s1LFvgUks5XTKVQwA%3D%3D
+![alt-tag](https://raw.githubusercontent.com/sbg/nci-workshop/master/img/img_importcomplete.png?token=AJDJU7LY2-TlVJBjmzaVrUTt9s1LFvgUks5XTKVQwA%3D%3D
 )
